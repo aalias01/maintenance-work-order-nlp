@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance Work Order NLP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-icon">🔧</span>
+        <div>
+          <h1>Maintenance Work Order NLP</h1>
+          <p class="header-sub">DistilBERT + LoRA · LLM ETL extraction · Semantic similarity search</p>
+        </div>
+      </div>
+      <div id="api-status" class="status-badge status-checking">⏳ Checking API…</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card input-card">
+      <h2>Work Order Text</h2>
+      <p class="section-hint">Enter a maintenance work order description. The model classifies the failure category and finds the 3 most similar past cases.</p>
+
+      <div class="examples-row">
+        <span class="examples-label">Try an example:</span>
+        <button class="example-btn" onclick="loadExample('mech')">Bearing failure</button>
+        <button class="example-btn" onclick="loadExample('elec')">Motor trip</button>
+        <button class="example-btn" onclick="loadExample('inst')">Transmitter drift</button>
+        <button class="example-btn" onclick="loadExample('pm')">Annual PM</button>
+      </div>
+
+      <textarea id="wo-text" rows="6" placeholder="E.g.: Responded to high vibration alarm on pump P-104. Found bearing wear after inspection. Root cause was inadequate lubrication. Replaced mechanical seal and bearing set. Equipment returned to service..."></textarea>
+
+      <button id="classify-btn" onclick="runClassification()">Classify &amp; Find Similar Cases</button>
+    </section>
+
+    <section id="result-section" class="hidden">
+      <div class="results-grid">
+        <div class="card result-card">
+          <h2>Classification</h2>
+          <div id="category-badge" class="category-badge"></div>
+          <div class="confidence-row">
+            <span class="confidence-label">Confidence</span>
+            <span id="confidence-val" class="confidence-val">—</span>
+          </div>
+          <div id="all-scores" class="all-scores"></div>
+          <div id="extracted-fields" class="extracted-fields hidden">
+            <h3>Extracted Fields</h3>
+            <div id="fields-table"></div>
+          </div>
+        </div>
+
+        <div class="card similar-card">
+          <h2>Similar Past Cases</h2>
+          <p class="section-hint">Most semantically similar work orders from the training corpus.</p>
+          <div id="similar-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card info-card">
+      <h2>What Makes This Different</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-icon">🏭</div>
+          <h3>Domain Data</h3>
+          <p>Corpus generated with real maintenance vocabulary from 12 years of industrial engineering — HVAC, subsea, manufacturing. Realistic abbreviations, failure taxonomies, and work-order style.</p>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">⚡</div>
+          <h3>LoRA Fine-Tuning</h3>
+          <p>DistilBERT fine-tuned with LoRA adapters: <strong>&lt;1% of parameters</strong> updated, near-identical F1 to full fine-tune, ~3× faster training. Adapter weights in megabytes, not gigabytes.</p>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">🤖</div>
+          <h3>LLM ETL Extraction</h3>
+          <p>GPT-4o-mini with Pydantic structured output lifts root-cause F1 from ~65% to ~90%. A hybrid extractor runs regex first and escalates only low-confidence records to the LLM — 97% of the accuracy at 20% of the API cost.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built by <a href="https://github.com/aalias01" target="_blank">Alvin Alias</a> — MS Data Science, UW · 12 years industrial engineering · DistilBERT + LoRA + BERTopic + sentence-transformers</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

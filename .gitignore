@@ -1,0 +1,19 @@
+**/*_local/
+data/*.csv
+data/*.jsonl
+data/*.json
+__pycache__/
+*.pyc
+*.egg-info/
+.env                  # OpenAI API key — NEVER commit
+.venv/
+.ipynb_checkpoints/
+# Keep model artifacts
+models/*
+!models/.gitkeep
+!models/tfidf_pipeline.joblib
+!models/distilbert_finetuned/
+!models/lora_adapter/
+!models/embeddings_index.npy
+!models/embeddings_texts.json
+.DS_Store
