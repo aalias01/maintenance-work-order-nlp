@@ -4,12 +4,12 @@
 const API_BASE = 'http://localhost:8000';
 
 const CATEGORY_LABELS = {
-  mechanical_failure:      '⚙️  Mechanical Failure',
-  electrical_failure:      '⚡ Electrical Failure',
-  hydraulic_failure:       '💧 Hydraulic Failure',
-  instrumentation_failure: '📡 Instrumentation Failure',
-  preventive_maintenance:  '✅ Preventive Maintenance',
-  operator_damage:         '⚠️  Operator Damage',
+  mechanical_failure:      'Mechanical Failure',
+  electrical_failure:      'Electrical Failure',
+  hydraulic_failure:       'Hydraulic Failure',
+  instrumentation_failure: 'Instrumentation Failure',
+  preventive_maintenance:  'Preventive Maintenance',
+  operator_damage:         'Operator Damage',
 };
 
 const EXAMPLES = {
@@ -18,6 +18,18 @@ const EXAMPLES = {
   inst: "DCS reading 245 psi on pressure transmitter PT-322 while gauge reads 185 psi — 60 psi deviation. Impulse line found plugged with process buildup. Flushed impulse lines and replaced pressure transmitter. Calibrated against reference gauge — verified within 2 psi. Cleared alarm.",
   pm:   "Completed annual PM on compressor C-101 per schedule. Changed compressor oil and filter. Replaced V-belt set and coupling insert. Lubricated all grease points per lube route card. No anomalies noted during inspection. All measurements within specification. Unit returned to service.",
 };
+
+function labelForCategory(category) {
+  return CATEGORY_LABELS[category] || category.replace(/_/g, ' ');
+}
+
+function appendText(tagName, className, text, parent) {
+  const el = document.createElement(tagName);
+  if (className) el.className = className;
+  el.textContent = text;
+  parent.appendChild(el);
+  return el;
+}
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 async function checkHealth() {
@@ -76,7 +88,7 @@ function renderResult(data) {
 
   // Category badge
   const badge = document.getElementById('category-badge');
-  badge.textContent = CATEGORY_LABELS[data.category] || data.category;
+  badge.textContent = labelForCategory(data.category);
   badge.className = `category-badge cat-${data.category}`;
 
   // Confidence
@@ -89,15 +101,18 @@ function renderResult(data) {
   for (const [cat, score] of sortedCats) {
     const pct = Math.round(score * 100);
     const isBest = cat === data.category;
-    scoresEl.insertAdjacentHTML('beforeend', `
-      <div class="score-row">
-        <div class="score-name">${cat.replace(/_/g, ' ')}</div>
-        <div class="score-bar-track">
-          <div class="score-bar-fill ${isBest ? 'best' : ''}" style="width:${pct}%"></div>
-        </div>
-        <div class="score-val">${pct}%</div>
-      </div>
-    `);
+    const row = document.createElement('div');
+    row.className = 'score-row';
+    appendText('div', 'score-name', cat.replace(/_/g, ' '), row);
+    const track = document.createElement('div');
+    track.className = 'score-bar-track';
+    const fill = document.createElement('div');
+    fill.className = `score-bar-fill ${isBest ? 'best' : ''}`;
+    fill.style.width = `${pct}%`;
+    track.appendChild(fill);
+    row.appendChild(track);
+    appendText('div', 'score-val', `${pct}%`, row);
+    scoresEl.appendChild(row);
   }
 
   // Extracted fields
@@ -108,12 +123,11 @@ function renderResult(data) {
     ftEl.innerHTML = '';
     for (const [key, val] of Object.entries(data.extracted_fields)) {
       if (!val) continue;
-      ftEl.insertAdjacentHTML('beforeend', `
-        <div class="fields-row">
-          <span class="field-key">${key.replace(/_/g, ' ')}</span>
-          <span class="field-val">${val}</span>
-        </div>
-      `);
+      const row = document.createElement('div');
+      row.className = 'fields-row';
+      appendText('span', 'field-key', key.replace(/_/g, ' '), row);
+      appendText('span', 'field-val', String(val), row);
+      ftEl.appendChild(row);
     }
   } else {
     efEl.classList.add('hidden');
@@ -125,19 +139,25 @@ function renderResult(data) {
   if (data.similar_cases && data.similar_cases.length > 0) {
     for (const c of data.similar_cases) {
       const sim = Math.round(c.similarity_score * 100);
-      listEl.insertAdjacentHTML('beforeend', `
-        <div class="similar-item">
-          <div class="similar-header">
-            <span class="similar-id">${c.work_order_id}</span>
-            <span class="similar-score">${sim}% similar</span>
-          </div>
-          <span class="similar-category cat-${c.failure_category}">${CATEGORY_LABELS[c.failure_category] || c.failure_category}</span>
-          <p class="similar-text">${c.text}</p>
-        </div>
-      `);
+      const item = document.createElement('div');
+      item.className = 'similar-item';
+      const header = document.createElement('div');
+      header.className = 'similar-header';
+      appendText('span', 'similar-id', c.work_order_id, header);
+      appendText('span', 'similar-score', `${sim}% similar`, header);
+      item.appendChild(header);
+      appendText(
+        'span',
+        `similar-category cat-${c.failure_category}`,
+        labelForCategory(c.failure_category),
+        item,
+      );
+      appendText('p', 'similar-text', c.text, item);
+      listEl.appendChild(item);
     }
   } else {
-    listEl.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">Similarity search not available — build embeddings index in notebook 08.</p>';
+    const message = appendText('p', null, 'Similarity search not available - build embeddings index in notebook 08.', listEl);
+    message.className = 'empty-state';
   }
 
   document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });

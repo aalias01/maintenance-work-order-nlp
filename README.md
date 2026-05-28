@@ -14,6 +14,8 @@ Every industrial company generates thousands of maintenance work orders per year
 **Live demo:** [your-project.vercel.app](https://your-project.vercel.app) *(fill in after deploy)*  
 **API docs:** [your-api.onrender.com/docs](https://your-api.onrender.com/docs) *(fill in after deploy)*
 
+**Current status:** portfolio scaffold with a working local baseline. The data generator, TF-IDF classifier artifact, embeddings index, API, frontend, and model interfaces are in place; transformer/LoRA notebook metrics and deployment links still need to be filled after local runs. See [Portfolio Readiness Guide](docs/PORTFOLIO_READINESS.md) for the exact completion checklist.
+
 ---
 
 ## Three Flavors of LLM Use (What Makes This Different)
@@ -151,6 +153,16 @@ python data/synthetic_generator.py
 # Then run notebooks in order: 01 → 02 → 03 → 04 → 05 → 07 → 08
 # (06 QLoRA requires Colab GPU — see notebook for Colab setup instructions)
 ```
+
+### Local API + Frontend Smoke Test
+
+After notebooks 03 and 08 have saved the classifier and embedding artifacts:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+Open `frontend/index.html` in a browser. The frontend expects the API at `http://localhost:8000` until `frontend/app.js` is updated with the deployed Render URL.
 
 ---
 

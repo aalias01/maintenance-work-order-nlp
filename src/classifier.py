@@ -103,11 +103,12 @@ class WorkOrderClassifier:
 
     def _classify_tfidf(self, text: str) -> dict:
         proba = self._tfidf_pipeline.predict_proba([text])[0]
+        labels = list(self._tfidf_pipeline.named_steps["clf"].classes_)
         best_idx = int(np.argmax(proba))
         return {
-            "category":   CATEGORY_LABELS[best_idx],
+            "category":   labels[best_idx],
             "confidence": round(float(proba[best_idx]), 4),
-            "all_scores": {CATEGORY_LABELS[i]: round(float(p), 4) for i, p in enumerate(proba)},
+            "all_scores": {labels[i]: round(float(p), 4) for i, p in enumerate(proba)},
             "model_used": "tfidf_lr",
         }
 

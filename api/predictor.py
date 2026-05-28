@@ -27,15 +27,29 @@ def load_all() -> None:
     global _clf, _embeddings, _corpus_texts, _corpus_df, _etl
 
     # Classifier
-    try:
-        _clf = WorkOrderClassifier(mode="distilbert_lora").load()
-        print("[predictor] LoRA classifier loaded.")
-    except Exception:
+    lora_dir = MODEL_DIR / "lora_adapter"
+    distilbert_dir = MODEL_DIR / "distilbert_finetuned"
+    tfidf_path = MODEL_DIR / "tfidf_pipeline.joblib"
+    if lora_dir.exists() and distilbert_dir.exists():
+        try:
+            _clf = WorkOrderClassifier(mode="distilbert_lora").load()
+            print("[predictor] LoRA classifier loaded.")
+        except Exception as e:
+            print(f"[predictor] LoRA classifier unavailable: {e}")
+    if _clf is None and distilbert_dir.exists():
+        try:
+            _clf = WorkOrderClassifier(mode="distilbert").load()
+            print("[predictor] DistilBERT classifier loaded.")
+        except Exception as e:
+            print(f"[predictor] DistilBERT classifier unavailable: {e}")
+    if _clf is None and tfidf_path.exists():
         try:
             _clf = WorkOrderClassifier(mode="tfidf").load()
-            print("[predictor] TF-IDF classifier loaded (LoRA not available).")
+            print("[predictor] TF-IDF classifier loaded.")
         except Exception as e:
-            print(f"[predictor] No classifier available: {e}")
+            print(f"[predictor] TF-IDF classifier unavailable: {e}")
+    if _clf is None:
+        print("[predictor] No classifier artifact available.")
 
     # Embeddings index
     try:

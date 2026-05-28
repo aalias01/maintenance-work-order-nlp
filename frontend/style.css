@@ -138,6 +138,7 @@ button#classify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .similar-score { font-size: 0.78rem; font-weight: 700; color: var(--accent); }
 .similar-category { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 4px; margin-bottom: 0.4rem; display: inline-block; }
 .similar-text { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.empty-state { color: var(--muted); font-size: 0.85rem; }
 
 /* Info grid */
 .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.2rem; margin-top: 1rem; }
