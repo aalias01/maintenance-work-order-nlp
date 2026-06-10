@@ -73,12 +73,12 @@
         <div class="info-item">
           <div class="info-icon">⚡</div>
           <h3>LoRA Fine-Tuning</h3>
-          <p>DistilBERT fine-tuned with LoRA adapters: <strong>&lt;1% of parameters</strong> updated, near-identical F1 to full fine-tune, ~3× faster training. Adapter weights in megabytes, not gigabytes.</p>
+          <p>DistilBERT fine-tuned with LoRA adapters: <strong>1.1% of parameters</strong> updated for 94.4% F1 vs. 95.9% full fine-tune, 1.6× faster training. The adapter is 2.8&nbsp;MB — the full model is 256&nbsp;MB.</p>
         </div>
         <div class="info-item">
           <div class="info-icon">🤖</div>
           <h3>LLM ETL Extraction</h3>
-          <p>GPT-4o-mini with Pydantic structured output lifts root-cause F1 from ~65% to ~90%. A hybrid extractor runs regex first and escalates only low-confidence records to the LLM — 97% of the accuracy at 20% of the API cost.</p>
+          <p>GPT-4o-mini with Pydantic structured output lifts failure-mode extraction from <strong>13% to 70%</strong> on noisy technician text. The measured lesson from the hybrid extractor: regex self-confidence is a poor escalation signal — production needs a learned gate.</p>
         </div>
       </div>
     </section>

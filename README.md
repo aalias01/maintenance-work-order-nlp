@@ -11,8 +11,9 @@ Every industrial company generates thousands of maintenance work orders per year
 
 **Domain credibility:** I've written real maintenance work orders across HVAC (Rheem), subsea (Centurion), and manufacturing (Daikin/Baker Hughes). The synthetic corpus reflects actual failure taxonomy and field vocabulary.
 
-**Live demo:** [your-project.vercel.app](https://your-project.vercel.app) *(fill in after deploy)*  
-**API docs:** [your-api.onrender.com/docs](https://your-api.onrender.com/docs) *(fill in after deploy)*
+**Live demo:** [maintenance-work-order-nlp.vercel.app](https://maintenance-work-order-nlp.vercel.app)  
+**API docs:** [maintenance-nlp-api.onrender.com/docs](https://maintenance-nlp-api.onrender.com/docs)  
+*(API runs on Render's free tier — the first request after an idle period takes ~30–60 s to wake the server)*
 
 **Current status:** all metrics in this README are measured, not projected — ETL extraction (rule-based / LLM / hybrid), classification (TF-IDF / DistilBERT / LoRA), clustering, and similarity search. Every number reproduces with `scripts/run_local_pipeline.py` and `scripts/run_etl_eval.py`. Remaining: the stretch QLoRA notebook (Colab GPU) and live deployment links.
 

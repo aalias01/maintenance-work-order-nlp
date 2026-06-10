@@ -1,7 +1,8 @@
 'use strict';
 
-// Update this after deploying to Render
-const API_BASE = 'http://localhost:8000';
+// Live API on Render (free tier sleeps when idle — first request may take ~60 s).
+// For local development, change to 'http://localhost:8000'.
+const API_BASE = 'https://maintenance-nlp-api.onrender.com';
 
 const CATEGORY_LABELS = {
   mechanical_failure:      'Mechanical Failure',

@@ -25,7 +25,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080", "http://127.0.0.1:8080",
-        # "https://your-project.vercel.app",  ← add after deploy
+        "https://maintenance-work-order-nlp.vercel.app",
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
