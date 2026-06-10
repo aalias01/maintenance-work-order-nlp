@@ -315,7 +315,177 @@ def _generate_wo_text(eq_tag: str, eq_type: str, cat: str, cd: dict) -> tuple[st
         "root_cause":     root_cause,
         "failure_category": cat,
     }
+    components = {"obs": obs, "action": action, "part": part,
+                  "root_cause": root_cause, "failure_mode": failure_mode}
+    text = _apply_noise(text, cat, cd, eq_tag, components, ground_truth)
     return text, ground_truth
+
+
+# ─── Realism / noise layer ────────────────────────────────────────────────────
+# Real CMMS text is messy: typos, shorthand, vague one-liners, overlapping
+# symptoms, and occasional miscategorized records. Without this layer the
+# per-category vocabulary is fully separable and every classifier scores 100%.
+
+# Noise knobs (probabilities per record)
+P_AMBIGUOUS_OBS  = 0.55   # replace category-specific observation with a generic one
+P_SYMPTOM_BLEED  = 0.30   # borrow a failure mode mention from a confusable category
+P_DROP_MODE      = 0.35   # technician never names the failure mode explicitly
+P_GENERIC_ACTION = 0.30   # action described generically ("completed repair")
+P_DROP_PART      = 0.25   # parts not itemized in text
+P_TERSE          = 0.18   # collapse record to a terse one-liner
+P_TYPOS          = 0.45   # introduce character-level typos
+P_LOWERCASE      = 0.20   # technician wrote everything lowercase
+P_FILLER         = 0.20   # append admin filler sentence
+P_LABEL_NOISE    = 0.02   # miscategorized in CMMS (classification label only)
+
+# Category-neutral action phrases — carry no classification signal
+GENERIC_ACTIONS = [
+    "completed repair as per procedure",
+    "repaired and tested unit",
+    "carried out corrective work and verified operation",
+    "fault rectified — unit back online",
+    "completed work order scope",
+]
+
+# Generic observations a technician could log for ANY failure type
+AMBIGUOUS_OBSERVATIONS = [
+    "Operator reported unusual noise from equipment",
+    "Equipment tripped during normal operation",
+    "Abnormal reading noted during routine rounds",
+    "Unit shut down on alarm — cause not immediately obvious",
+    "Leak observed near unit — source unclear at first inspection",
+    "Performance degradation reported by operations",
+    "Intermittent fault — could not reproduce on first visit",
+    "Equipment found in failed state at shift start",
+]
+
+# Categories whose symptoms plausibly overlap in real plants
+CONFUSION_NEIGHBORS = {
+    "mechanical_failure":      ["hydraulic_failure", "operator_damage"],
+    "electrical_failure":      ["instrumentation_failure"],
+    "hydraulic_failure":       ["mechanical_failure"],
+    "instrumentation_failure": ["electrical_failure"],
+    "preventive_maintenance":  ["mechanical_failure", "instrumentation_failure"],
+    "operator_damage":         ["mechanical_failure"],
+}
+
+FILLER_SENTENCES = [
+    "See attached photos for reference.",
+    "Follow-up WO raised for permanent repair.",
+    "Parts ordered under PO 4500123 — temporary fix in place.",
+    "Discussed with shift supervisor before closing WO.",
+    "Awaiting engineering review before next PM cycle.",
+    "No spares in stock — used refurbished unit from warehouse.",
+]
+
+SHORTHAND = {
+    " mechanical seal": " mech seal", " bearing set": " brg set",
+    " pressure transmitter": " PT", " temperature": " temp",
+    " equipment": " equip", " maintenance": " maint",
+    " replaced": " repl", " inspection": " inspx",
+    " vibration": " vib", " hydraulic": " hyd",
+    " investigation": " investig", " returned to service": " RTS",
+}
+
+
+def _typo(text: str, rate: float = 0.015) -> str:
+    """Inject character-level typos (swap, drop, double) at ~rate per char."""
+    chars = list(text)
+    i = 0
+    out = []
+    while i < len(chars):
+        c = chars[i]
+        if c.isalpha() and random.random() < rate:
+            op = random.random()
+            if op < 0.4 and i + 1 < len(chars):      # swap with next
+                out.append(chars[i + 1]); out.append(c); i += 2; continue
+            elif op < 0.7:                            # drop
+                i += 1; continue
+            else:                                     # double
+                out.append(c); out.append(c); i += 1; continue
+        out.append(c); i += 1
+    return "".join(out)
+
+
+def _replace_any_case(text: str, target: str, repl: str) -> tuple[str, bool]:
+    for variant in (target, target.lower(), target.capitalize()):
+        if variant in text:
+            return text.replace(variant, repl, 1), True
+    return text, False
+
+
+def _apply_noise(text: str, cat: str, cd: dict, eq_tag: str,
+                 comp: dict, gt: dict) -> str:
+    """Apply realism transformations. Mutates gt: when information is removed
+    from the text, the corresponding ground-truth field is set to None so the
+    ETL evaluation never penalizes an extractor for unextractable fields."""
+
+    # 1. Terse one-liner: technician in a hurry. Most fields never make it
+    # into the text.
+    if random.random() < P_TERSE:
+        part_short = comp["part"].split("(")[0].strip()
+        action = (random.choice(GENERIC_ACTIONS) if random.random() < 0.5
+                  else comp["action"].lower())
+        keep_part = random.random() < 0.5
+        if keep_part:
+            text = f"{action} on {eq_tag}, repl {part_short}, tested ok"
+        else:
+            text = random.choice([
+                f"{eq_tag} — {action}. ok now",
+                f"{eq_tag} down. {action}. RTS",
+            ])
+            gt["parts_replaced"] = None
+        gt["failure_mode"] = None
+        gt["root_cause"] = None
+    else:
+        # 2. Replace category-specific observation with a generic one
+        if random.random() < P_AMBIGUOUS_OBS:
+            for variant in (comp["obs"], comp["obs"].lower()):
+                if variant in text:
+                    text = text.replace(
+                        variant, random.choice(AMBIGUOUS_OBSERVATIONS).lower(), 1)
+                    break
+
+        # 3. Drop the explicit failure-mode mention
+        if random.random() < P_DROP_MODE:
+            text, found = _replace_any_case(text, comp["failure_mode"], "an issue")
+            if found:
+                gt["failure_mode"] = None
+
+        # 4. Generic action wording — no category signal
+        if random.random() < P_GENERIC_ACTION:
+            text, _ = _replace_any_case(
+                text, comp["action"], random.choice(GENERIC_ACTIONS))
+
+        # 5. Parts not itemized
+        if random.random() < P_DROP_PART:
+            text, found = _replace_any_case(text, comp["part"], "misc consumables")
+            if found:
+                gt["parts_replaced"] = None
+
+        # 6. Symptom bleed: mention a confusable category's failure mode
+        if random.random() < P_SYMPTOM_BLEED:
+            neighbor = random.choice(CONFUSION_NEIGHBORS[cat])
+            bleed_mode = random.choice(CATEGORY_DATA[neighbor]["failure_modes"])
+            text += f" Initially suspected {bleed_mode} but ruled out."
+
+    # 7. Shorthand
+    if random.random() < 0.7:
+        for full, abbr in SHORTHAND.items():
+            if full in text and random.random() < 0.5:
+                text = text.replace(full, abbr)
+
+    # 8. Admin filler
+    if random.random() < P_FILLER:
+        text += " " + random.choice(FILLER_SENTENCES)
+
+    # 9. Typos and casing
+    if random.random() < P_TYPOS:
+        text = _typo(text)
+    if random.random() < P_LOWERCASE:
+        text = text.lower()
+
+    return text
 
 
 def generate_corpus(n: int = N_RECORDS, seed: int = SEED) -> tuple[pd.DataFrame, list[dict]]:
@@ -353,7 +523,15 @@ def generate_corpus(n: int = N_RECORDS, seed: int = SEED) -> tuple[pd.DataFrame,
 
             text, gt = _generate_wo_text(eq_tag, eq_name, cat, cat_data)
 
-            part_short = gt["parts_replaced"].split("(")[0].strip()
+            # CMMS label noise: ~2% of records are miscategorized by the
+            # technician. Ground truth (what actually happened) stays correct;
+            # only the classification label column is flipped.
+            label = cat
+            if random.random() < P_LABEL_NOISE:
+                label = random.choice(CONFUSION_NEIGHBORS[cat])
+
+            part_for_inventory = gt["parts_replaced"] or random.choice(cat_data["parts_replaced"])
+            part_short = part_for_inventory.split("(")[0].strip()
             qty = random.randint(1, 3)
 
             records.append({
@@ -363,7 +541,7 @@ def generate_corpus(n: int = N_RECORDS, seed: int = SEED) -> tuple[pd.DataFrame,
                 "equipment_tag":   eq_tag,
                 "equipment_type":  eq_name,
                 "technician_id":   tech_id,
-                "failure_category": cat,
+                "failure_category": label,
                 "text":            text,
                 "labor_hours":     labor_hrs,
                 "parts_used":      f"{qty}× {part_short}",

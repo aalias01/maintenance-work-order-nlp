@@ -5,14 +5,17 @@ data/*.json
 __pycache__/
 *.pyc
 *.egg-info/
-.env                  # OpenAI API key — NEVER commit
+# OpenAI API key — NEVER commit (inline comments don't work in .gitignore!)
+.env
 .venv/
 .ipynb_checkpoints/
-# Keep model artifacts
+# Keep small model artifacts. The full DistilBERT fine-tune (257 MB) stays
+# local — GitHub rejects files >100 MB, and shipping the 2.9 MB LoRA adapter
+# instead IS the point of the PEFT comparison. Reproduce the full model with
+# scripts/run_local_pipeline.py.
 models/*
 !models/.gitkeep
 !models/tfidf_pipeline.joblib
-!models/distilbert_finetuned/
 !models/lora_adapter/
 !models/embeddings_index.npy
 !models/embeddings_texts.json
