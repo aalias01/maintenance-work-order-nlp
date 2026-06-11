@@ -5,7 +5,9 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt
+    # Corpus CSV is gitignored; the generator is fully seeded, so rebuilding it
+    # here reproduces the exact corpus the embeddings index was built from.
+    buildCommand: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt && python data/synthetic_generator.py
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
