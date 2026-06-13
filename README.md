@@ -1,6 +1,6 @@
 # Maintenance Work Order NLP
 
-> **The deepest project in the portfolio — three distinct flavors of LLM use in one pipeline: LLM as data engineer (ETL), LLM as model (PEFT fine-tune), and LLM as application target (semantic search).**
+> **Three distinct uses of LLMs in one pipeline: as data engineer (ETL extraction from messy work order text), as model (PEFT fine-tune with LoRA at 1.1% of parameters), and as application target (semantic similarity search for past cases).**
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
 [![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow)](https://huggingface.co/)
@@ -185,18 +185,4 @@ Open `frontend/index.html` in a browser. The frontend expects the API at `http:/
 
 ---
 
-## Interview Context
-
-1. **Domain data creation:** *"I've written real maintenance work orders professionally. The synthetic data reflects actual failure taxonomy — bearing degradation modes, seal failure patterns, hydraulic pressure signatures — plus a calibrated noise layer: typos, technician shorthand, terse one-liners, overlapping symptoms, and 2% mislabeled records. My first version was too clean and every model scored 100%; making the data hard enough to be worth modeling was itself the data-engineering lesson."*
-
-2. **LLM ETL (the production story):** *"Real CMMS data arrives as messy free text. I built three extractors — regex baseline, pure GPT-4o-mini with Pydantic structured output, and a hybrid that runs regex first and escalates low-confidence records to the LLM. The LLM lifted failure-mode extraction from 13% to 70%. But the hybrid taught me the real lesson: it cut API calls 56% yet lost most of the LLM's gain, because the regex extractor's self-reported confidence was miscalibrated — it was confidently wrong on exactly the records that needed escalation. I'd ship the hybrid pattern, but with a learned escalation gate, not extractor self-confidence."*
-
-3. **LoRA vs. full fine-tune:** *"LoRA updated 1.1% of DistilBERT's parameters and landed within 1.5 F1 points of the full fine-tune — on a corpus with a ~98% noise ceiling, that's most of the available gain. The artifact difference is the real story: a 2.8 MB adapter versus a 256 MB model. The full model doesn't even fit under GitHub's file limit; the adapter ships in the repo. That's deployment economics, measured."*
-
-4. **BERTopic discovery:** *"The honest finding: BERTopic didn't recover my 6 failure categories — it clustered by equipment type and even by writing style (terse one-liners formed their own cluster). Unsupervised structure follows the strongest embedding signal, which was equipment vocabulary, not failure semantics. Knowing what embeddings actually organize by is exactly what tells you when you need labels."*
-
-5. **Why this project matters:** *"Every company with a CMMS has thousands of unstructured work orders sitting in a database nobody reads. This pipeline makes them searchable, classifiable, and analyzable — it's a direct productivity tool for maintenance engineers."*
-
----
-
-*Built by [Alvin Alias](https://github.com/aalias01) — MS Data Science, University of Washington · 12 years industrial engineering (HVAC, subsea, manufacturing)*
+*Built by [Alvin Alias](https://github.com/aalias01) · MS Data Science, University of Washington · 12 years industrial engineering (HVAC, subsea, manufacturing)*
