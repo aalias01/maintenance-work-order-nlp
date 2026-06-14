@@ -26,6 +26,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:8080", "http://127.0.0.1:8080",
         "https://maintenance-work-order-nlp.vercel.app",
+        # Portfolio landing live-model playground (alvinalias.com).
+        "https://alvinalias.com", "https://www.alvinalias.com",
     ],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
