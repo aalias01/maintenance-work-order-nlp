@@ -5,9 +5,11 @@ services:
     plan: free
     region: oregon
     branch: main
-    # Corpus CSV is gitignored; the generator is fully seeded, so rebuilding it
-    # here reproduces the exact corpus the embeddings index was built from.
-    buildCommand: pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt && python data/synthetic_generator.py
+    # Runtime is torch-free — the model is served as int8 ONNX (see scripts/build_onnx.py),
+    # so no PyTorch install is needed (smaller slug, faster cold start).
+    # Corpus CSV is gitignored; the generator is fully seeded, so rebuilding it here
+    # reproduces the exact corpus the embeddings index was built from.
+    buildCommand: pip install -r requirements.txt && python data/synthetic_generator.py
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:

@@ -122,6 +122,42 @@ def embed(
     return embeddings
 
 
+class OnnxEmbedder:
+    """Mean-pooled MiniLM embeddings via onnxruntime (int8) — no torch, no
+    sentence-transformers. Reproduces the mean pooling used to build the corpus
+    index; L2 normalization is applied in cosine_similarity_search, so ranking is
+    unaffected. This is what the API uses in production (fits Render's free tier)."""
+
+    def __init__(self, onnx_dir: str = "models/onnx/embedder"):
+        import onnxruntime as ort
+        from transformers import AutoTokenizer
+        d = Path(onnx_dir)
+        model_path = d / "model_int8.onnx"
+        if not model_path.exists():
+            model_path = d / "model.onnx"
+        self._tok = AutoTokenizer.from_pretrained(str(d))
+        so = ort.SessionOptions()
+        so.intra_op_num_threads = 1
+        self._sess = ort.InferenceSession(
+            str(model_path), sess_options=so, providers=["CPUExecutionProvider"]
+        )
+
+    def encode(self, texts, batch_size: int = 32) -> np.ndarray:
+        if isinstance(texts, str):
+            texts = [texts]
+        out = []
+        for i in range(0, len(texts), batch_size):
+            enc = self._tok(texts[i:i + batch_size], return_tensors="np",
+                            padding=True, truncation=True, max_length=256)
+            feeds = {inp.name: enc[inp.name].astype(np.int64) for inp in self._sess.get_inputs()}
+            last_hidden = self._sess.run(None, feeds)[0]
+            mask = enc["attention_mask"][..., None].astype(np.float32)
+            summed = (last_hidden * mask).sum(axis=1)
+            counts = np.clip(mask.sum(axis=1), 1e-9, None)
+            out.append(summed / counts)
+        return np.vstack(out).astype(np.float32)
+
+
 def save_embeddings(embeddings: np.ndarray, texts: list[str], out_dir: str = "models") -> None:
     path = Path(out_dir)
     path.mkdir(exist_ok=True)

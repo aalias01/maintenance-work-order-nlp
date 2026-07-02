@@ -19,4 +19,11 @@ models/*
 !models/lora_adapter/
 !models/embeddings_index.npy
 !models/embeddings_texts.json
+# int8 ONNX artifacts served in production (built by scripts/build_onnx.py, each < 100 MB)
+!models/onnx/
+# Track everything under models/onnx/ EXCEPT the fp32 export + its external-data blob
+# (~256 MB, over GitHub's 100 MB limit). Only model_int8.onnx + tokenizer files ship.
+models/onnx/**/model.onnx
+models/onnx/**/*.onnx.data
+models/onnx/**/*.onnx_data
 .DS_Store

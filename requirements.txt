@@ -1,17 +1,17 @@
-# Render deployment (pip-based)
-# Local dev: conda env create -f environment.yml
-
+# Production runtime — TORCH-FREE.
+# The real DistilBERT+LoRA classifier and the MiniLM similarity embedder are served
+# as int8 ONNX models via onnxruntime (built once by scripts/build_onnx.py). Under
+# PyTorch they need ~650 MB and OOM on Render's 512 MB free tier; as int8 ONNX the
+# pair runs in ~250-300 MB. To (re)build the ONNX artifacts see requirements-build.txt.
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.0.0
 python-multipart>=0.0.9
 pandas>=2.0.0
 numpy>=1.24.0
-scikit-learn>=1.3.0
-nltk>=3.8.0
-transformers>=4.40.0
-sentence-transformers>=3.0.0
-torch>=2.2.0
-peft>=0.10.0
+scikit-learn>=1.3.0        # TF-IDF fallback classifier (loads if ONNX artifacts absent)
 joblib>=1.3.0
+nltk>=3.8.0
+transformers>=4.40.0       # tokenizer only — no torch is imported at runtime
+onnxruntime>=1.18.0
 python-dotenv>=1.0.0

@@ -1,0 +1,10 @@
+# Build-only deps for scripts/build_onnx.py (needs PyTorch; NOT installed on Render).
+# Run once on a machine with torch:  pip install -r requirements-build.txt
+torch>=2.2.0
+transformers>=4.40.0
+peft>=0.10.0
+onnx>=1.15.0
+onnxscript>=0.1.0          # required by torch.onnx.export in torch >= 2.6
+onnxruntime>=1.18.0
+pandas>=2.0.0
+numpy>=1.24.0
