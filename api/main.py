@@ -25,7 +25,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080", "http://127.0.0.1:8080",
-        "https://maintenance-work-order-nlp.vercel.app",
+        "https://workorders.alvinalias.com",         # canonical demo (Primary)
+        "https://maintenance-work-order-nlp.vercel.app",  # legacy, 308-redirects to subdomain
         # Portfolio landing live-model playground (alvinalias.com).
         "https://alvinalias.com", "https://www.alvinalias.com",
     ],

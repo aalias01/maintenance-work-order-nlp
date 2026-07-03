@@ -11,7 +11,7 @@ Every industrial company generates thousands of maintenance work orders per year
 
 **Domain credibility:** I've written real maintenance work orders across HVAC (Rheem), subsea (Centurion), and manufacturing (Daikin/Baker Hughes). The synthetic corpus reflects actual failure taxonomy and field vocabulary.
 
-**Live demo:** [maintenance-work-order-nlp.vercel.app](https://maintenance-work-order-nlp.vercel.app)  
+**Live demo:** [workorders.alvinalias.com](https://workorders.alvinalias.com)  
 **API docs:** [maintenance-nlp-api.onrender.com/docs](https://maintenance-nlp-api.onrender.com/docs)  
 *(API runs on Render's free tier — the first request after an idle period takes ~30–60 s to wake the server)*
 
