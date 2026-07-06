@@ -1,0 +1,14 @@
+[tool.ruff]
+target-version = "py311"
+exclude = [
+  "data",
+  "notebooks",
+  "docs_local",
+  ".git",
+  ".venv",
+  "__pycache__",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/run_etl_eval.py" = ["E402"]
+"scripts/run_local_pipeline.py" = ["E402"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from time import perf_counter
 from typing import Optional
 
 import numpy as np
@@ -31,6 +32,7 @@ _embedder = None                       # OnnxEmbedder or sentence-transformers f
 _embeddings: Optional[np.ndarray] = None
 _corpus_texts: Optional[list[str]] = None
 _corpus_df: Optional[pd.DataFrame] = None
+_corpus_meta: Optional[list[dict[str, str]]] = None
 _etl: Optional[ETLExtractor] = None
 
 
@@ -47,7 +49,15 @@ class _STEmbedder:
 
 
 def load_all() -> None:
-    global _clf, _embedder, _embeddings, _corpus_texts, _corpus_df, _etl
+    global _clf, _embedder, _embeddings, _corpus_texts, _corpus_df, _corpus_meta, _etl
+
+    _clf = None
+    _embedder = None
+    _embeddings = None
+    _corpus_texts = None
+    _corpus_df = None
+    _corpus_meta = None
+    _etl = None
 
     onnx_cls = ONNX_DIR / "classifier"
     onnx_emb = ONNX_DIR / "embedder"
@@ -100,52 +110,108 @@ def load_all() -> None:
     wo_csv = DATA_DIR / "work_orders.csv"
     if wo_csv.exists():
         _corpus_df = pd.read_csv(wo_csv)
+        print(f"[predictor] Corpus CSV loaded: {len(_corpus_df)} rows.")
+    else:
+        meta_path = MODEL_DIR / "corpus_meta.json"
+        if meta_path.exists():
+            try:
+                _corpus_meta = json.loads(meta_path.read_text())
+                print(f"[predictor] Corpus metadata loaded: {len(_corpus_meta)} rows.")
+            except Exception as e:
+                print(f"[predictor] Corpus metadata unavailable: {e}")
 
     # ETL extractor (rule-based — no API key needed)
     _etl = ETLExtractor(mode="rule_based")
 
 
+def _corpus_size() -> int:
+    if _corpus_df is not None:
+        return len(_corpus_df)
+    if _corpus_meta is not None:
+        return len(_corpus_meta)
+    return 0
+
+
+def _corpus_row(idx: int) -> dict[str, str]:
+    if _corpus_df is not None:
+        row = _corpus_df.iloc[idx]
+        return {
+            "work_order_id": str(row.get("work_order_id", idx)),
+            "text": str(row.get("text", ""))[:300],
+            "failure_category": str(row.get("failure_category", "")),
+        }
+    if _corpus_meta is not None:
+        row = _corpus_meta[idx]
+        return {
+            "work_order_id": str(row.get("work_order_id", idx)),
+            "text": str(row.get("text", ""))[:300],
+            "failure_category": str(row.get("failure_category", "")),
+        }
+    raise IndexError("Corpus rows are unavailable.")
+
+
 def classify(req: ClassifyRequest, top_k: int = 3) -> ClassifyResponse:
-    if _clf is None:
-        raise RuntimeError("Classifier not loaded.")
+    started = perf_counter()
+    status = "ok"
+    similarity_on = False
 
-    result = _clf.classify(req.text)
+    try:
+        if _clf is None:
+            status = "error"
+            raise RuntimeError("Classifier not loaded.")
 
-    # Similarity search
-    similar_cases = None
-    if _embedder is not None and _embeddings is not None and _corpus_df is not None:
-        try:
-            q_emb = _embedder.encode([req.text])[0]
-            hits = cosine_similarity_search(q_emb, _embeddings, top_k=top_k)
-            similar_cases = []
-            for idx, score in hits:
-                row = _corpus_df.iloc[idx]
-                similar_cases.append(SimilarCase(
-                    work_order_id=str(row.get("work_order_id", idx)),
-                    text=str(row.get("text", ""))[:300],
-                    failure_category=str(row.get("failure_category", "")),
-                    similarity_score=round(score, 4),
-                ))
-        except Exception as e:
-            print(f"[predictor] Similarity search failed: {e}")
+        result = _clf.classify(req.text)
 
-    # ETL extraction
-    extracted = None
-    if _etl is not None:
-        try:
-            fields = _etl.extract(req.text)
-            extracted = fields.model_dump(exclude={"confidence", "extractor_used"})
-        except Exception:
-            pass
+        # Similarity search
+        similar_cases = None
+        if _embedder is not None and _embeddings is not None and _corpus_size() > 0:
+            similarity_on = True
+            try:
+                q_emb = _embedder.encode([req.text])[0]
+                hits = cosine_similarity_search(q_emb, _embeddings, top_k=top_k)
+                similar_cases = []
+                for idx, score in hits:
+                    row = _corpus_row(idx)
+                    similar_cases.append(SimilarCase(
+                        work_order_id=row["work_order_id"],
+                        text=row["text"],
+                        failure_category=row["failure_category"],
+                        similarity_score=round(score, 4),
+                    ))
+            except Exception as e:
+                status = "similarity_error"
+                similarity_on = False
+                print(f"[predictor] Similarity search failed: {e}")
 
-    return ClassifyResponse(
-        category=result["category"],
-        confidence=result["confidence"],
-        all_scores=result["all_scores"],
-        model_used=result["model_used"],
-        similar_cases=similar_cases,
-        extracted_fields=extracted,
-    )
+        # ETL extraction
+        extracted = None
+        if _etl is not None:
+            try:
+                fields = _etl.extract(req.text)
+                extracted = fields.model_dump(exclude={"confidence", "extractor_used"})
+            except Exception:
+                pass
+
+        return ClassifyResponse(
+            category=result["category"],
+            confidence=result["confidence"],
+            all_scores=result["all_scores"],
+            model_used=result["model_used"],
+            similar_cases=similar_cases,
+            extracted_fields=extracted,
+        )
+    except Exception:
+        if status == "ok":
+            status = "error"
+        raise
+    finally:
+        elapsed_ms = (perf_counter() - started) * 1000
+        similarity_state = "on" if similarity_on else "off"
+        print(
+            "[predictor] classify "
+            f"status={status} text_len={len(req.text)} "
+            f"similarity={similarity_state} ms={elapsed_ms:.1f}"
+        )
 
 
 def is_ready() -> bool:
@@ -163,5 +229,6 @@ def status() -> dict:
         "classifier_loaded": _clf is not None,
         "embeddings_loaded": _embeddings is not None,
         "model_mode": mode,
-        "corpus_size": len(_corpus_df) if _corpus_df is not None else 0,
+        "extractor_mode": _etl.mode if _etl is not None else "none",
+        "corpus_size": _corpus_size(),
     }

@@ -3,89 +3,136 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maintenance Work Order NLP</title>
+  <title>Work order reader · maintenance text</title>
+  <script>
+    (function () {
+      var match = document.cookie.match(/(?:^|;\s*)mode=(light|dark)/);
+      var stored = match ? match[1] : localStorage.getItem('mode');
+      var theme = stored === 'dark' ? 'night' : stored === 'light' ? 'day' : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'day');
+      document.documentElement.setAttribute('data-theme', theme);
+    }());
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <div class="header-inner">
-      <div class="header-title">
-        <span class="header-icon">🔧</span>
-        <div>
-          <h1>Maintenance Work Order NLP</h1>
-          <p class="header-sub">DistilBERT + LoRA · LLM ETL extraction · Semantic similarity search</p>
-        </div>
+  <header class="nameplate">
+    <div class="nameplate-main">
+      <div>
+        <h1>Work order reader</h1>
+        <p>Classifies maintenance work orders and finds the closest past cases. Built by Alvin Alias.</p>
       </div>
-      <div id="api-status" class="status-badge status-checking">⏳ Checking API…</div>
+      <div class="governing" title="README PEFT comparison table">
+        <strong>F1 94.4% / training 1.1% of params</strong>
+        <span>LoRA fine-tune · full fine-tune reference 95.9%</span>
+      </div>
+      <nav class="nameplate-links" aria-label="Project links">
+        <a href="https://github.com/aalias01/maintenance-work-order-nlp">GitHub</a>
+        <a href="https://maintenance-nlp-api.onrender.com/docs">API docs</a>
+        <a href="https://alvinalias.com/notes/posts/regex-confidence-gate.html">Write-up</a>
+      </nav>
+      <div class="mode-control">
+        <span class="series-token">AA-2026-05</span>
+        <button id="mode-toggle" class="mode-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+          <span class="toggle-icon" aria-hidden="true"></span>
+          <span class="toggle-knob" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+    <div class="status-strip">
+      <span id="api-status">model waking, first run may take up to a minute</span>
+      <div id="nameplate-warmup" class="warmup warmup-compact hidden" aria-live="polite"></div>
     </div>
   </header>
 
   <main>
-    <section class="card input-card">
-      <h2>Work Order Text</h2>
-      <p class="section-hint">Enter a maintenance work order description. The model classifies the failure category and finds the 3 most similar past cases.</p>
-
-      <div class="examples-row">
-        <span class="examples-label">Try an example:</span>
-        <button class="example-btn" onclick="loadExample('mech')">Bearing failure</button>
-        <button class="example-btn" onclick="loadExample('elec')">Motor trip</button>
-        <button class="example-btn" onclick="loadExample('inst')">Transmitter drift</button>
-        <button class="example-btn" onclick="loadExample('pm')">Annual PM</button>
+    <section class="faceplate" aria-label="Work order reader">
+      <div class="order-side">
+        <div class="order-frame">
+          <p id="provenance-line" class="provenance-line">Paste your own</p>
+          <textarea id="order-text" maxlength="2000" placeholder="Describe the failure, what was found, and what was done"></textarea>
+        </div>
+        <div class="controls" aria-label="Run controls">
+          <button id="sample-button" class="primary-button" type="button">Read a sample order</button>
+          <button id="manual-button" class="secondary-button" type="button">Paste your own</button>
+          <button id="manual-run-button" class="secondary-button hidden" type="button">Read pasted text</button>
+        </div>
+        <p id="control-helper" class="helper-text">Rotates eight orders I wrote and labeled myself. The intended label prints after the model commits.</p>
+        <div id="error-block" class="error-block hidden" role="alert"></div>
+        <div id="run-warmup" class="warmup warmup-large hidden" aria-live="polite"></div>
+        <div id="run-log" class="run-log" aria-live="polite"></div>
       </div>
 
-      <textarea id="wo-text" rows="6" placeholder="E.g.: Responded to high vibration alarm on pump P-104. Found bearing wear after inspection. Root cause was inadequate lubrication. Replaced mechanical seal and bearing set. Equipment returned to service..."></textarea>
+      <div class="reading-side" aria-live="polite">
+        <p class="section-label">Reading</p>
+        <h2 id="category-reading" title="API field: category">Waiting for a work order</h2>
+        <div id="confidence-reading" class="confidence-reading" title="API field: confidence">0.00 confidence</div>
+        <div id="confidence-scale" class="confidence-scale" aria-hidden="true"></div>
+        <p id="intended-line" class="intended-line">your text · no intended label to compare</p>
 
-      <button id="classify-btn" onclick="runClassification()">Classify &amp; Find Similar Cases</button>
+        <section class="score-section" aria-label="Every category score">
+          <h3>Every category's score</h3>
+          <div id="all-scores" class="score-list"></div>
+        </section>
+
+        <section class="extraction-section" aria-label="Extracted fields">
+          <h3>What the rule-based pass pulled out</h3>
+          <p>regex extraction; the LLM extractor is a notebook result, not this endpoint (note 5)</p>
+          <div id="fields-table" class="fields-table">
+            <div class="empty-state">No fields returned.</div>
+          </div>
+        </section>
+
+        <section class="similar-section" aria-label="Similar past cases">
+          <h3>Closest past cases from the corpus</h3>
+          <div id="similar-list" class="similar-list">
+            <div class="empty-state">No similar cases returned.</div>
+          </div>
+        </section>
+      </div>
     </section>
 
-    <section id="result-section" class="hidden">
-      <div class="results-grid">
-        <div class="card result-card">
-          <h2>Classification</h2>
-          <div id="category-badge" class="category-badge"></div>
-          <div class="confidence-row">
-            <span class="confidence-label">Confidence</span>
-            <span id="confidence-val" class="confidence-val">—</span>
-          </div>
-          <div id="all-scores" class="all-scores"></div>
-          <div id="extracted-fields" class="extracted-fields hidden">
-            <h3>Extracted Fields</h3>
-            <div id="fields-table"></div>
-          </div>
+    <section class="folds" aria-label="Project records">
+      <details>
+        <summary>Calibration record · LoRA vs full fine-tune vs TF-IDF</summary>
+        <div class="fold-body">
+          <table>
+            <tbody>
+              <tr><th>Macro F1 94.4%</th><td>DistilBERT + LoRA, 743K trainable params, 1.1% of the model, 2.8 MB artifact</td></tr>
+              <tr><th>95.9%</th><td>full fine-tune, 67M params, 256 MB</td></tr>
+              <tr><th>93.5%</th><td>TF-IDF + logistic regression baseline</td></tr>
+              <tr><th>Failure-mode extraction</th><td>13% rule-based to 70% with the LLM extractor</td></tr>
+              <tr><th>Hybrid extractor</th><td>56% fewer LLM calls but far less than 56% of the uplift kept; regex confidence is a poor escalation gate</td></tr>
+              <tr><th>Held-out test</th><td>600 records, stratified, seed 42</td></tr>
+            </tbody>
+          </table>
         </div>
-
-        <div class="card similar-card">
-          <h2>Similar Past Cases</h2>
-          <p class="section-hint">Most semantically similar work orders from the training corpus.</p>
-          <div id="similar-list"></div>
+      </details>
+      <details>
+        <summary>How it works · three uses of language models</summary>
+        <div class="fold-body">
+          <p>I use one pipeline three ways: extraction from messy text into structured records, a LoRA fine-tune that updates 1.1% of parameters, and semantic retrieval over past cases. The useful result is the negative one: the hybrid extractor's regex confidence gate chose the wrong records to escalate.</p>
         </div>
-      </div>
-    </section>
-
-    <section class="card info-card">
-      <h2>What Makes This Different</h2>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-icon">🏭</div>
-          <h3>Domain Data</h3>
-          <p>Corpus generated with real maintenance vocabulary from 12 years of industrial engineering — HVAC, subsea, manufacturing. Realistic abbreviations, failure taxonomies, and work-order style.</p>
+      </details>
+      <details>
+        <summary>Notes · the corpus is synthetic and says so</summary>
+        <div class="fold-body">
+          <ol>
+            <li>This runs on a free tier that sleeps between visitors. First start takes 30 to 60 seconds; runs after that are quick.</li>
+            <li>Every record in the corpus is synthetic and generated with a calibrated noise layer; the taxonomy, vocabulary, and abbreviations come from 12 years of writing real work orders at Rheem, Centurion, Baker Hughes, and Daikin.</li>
+            <li>The eight samples are mine: written for this page and labeled with what I intended. When the model disagrees with me, the page says so.</li>
+            <li>Similarity search retrieves from the training corpus; the returned cases are synthetic records.</li>
+            <li>Field extraction on this page runs the rule-based pass, which is fast and free; the LLM extractor that lifts failure-mode accuracy from 13% to 70% is measured in the notebooks and priced in the calibration record.</li>
+          </ol>
         </div>
-        <div class="info-item">
-          <div class="info-icon">⚡</div>
-          <h3>LoRA Fine-Tuning</h3>
-          <p>DistilBERT fine-tuned with LoRA adapters: <strong>1.1% of parameters</strong> updated for 94.4% F1 vs. 95.9% full fine-tune, 1.6× faster training. The adapter is 2.8&nbsp;MB — the full model is 256&nbsp;MB.</p>
-        </div>
-        <div class="info-item">
-          <div class="info-icon">🤖</div>
-          <h3>LLM ETL Extraction</h3>
-          <p>GPT-4o-mini with Pydantic structured output lifts failure-mode extraction from <strong>13% to 70%</strong> on noisy technician text. The measured lesson from the hybrid extractor: regex self-confidence is a poor escalation signal — production needs a learned gate.</p>
-        </div>
-      </div>
+      </details>
     </section>
   </main>
 
   <footer>
-    <p>Built by <a href="https://github.com/aalias01" target="_blank">Alvin Alias</a> — MS Data Science, UW · 12 years industrial engineering · DistilBERT + LoRA + BERTopic + sentence-transformers</p>
+    Built by Alvin Alias · 2026 · AA-2026-05 · <a href="https://github.com/aalias01/maintenance-work-order-nlp">GitHub</a> · <a href="https://maintenance-nlp-api.onrender.com/docs">API docs</a>
   </footer>
 
   <script src="app.js"></script>

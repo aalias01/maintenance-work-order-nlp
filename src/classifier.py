@@ -13,9 +13,7 @@ Usage:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Optional
 
 import joblib
 import numpy as np
@@ -66,7 +64,6 @@ class WorkOrderClassifier:
 
     def _load_hf_model(self, path: Path) -> None:
         from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
-        import torch
         self._tokenizer = DistilBertTokenizerFast.from_pretrained(str(path))
         self._model = DistilBertForSequenceClassification.from_pretrained(str(path))
         self._model.eval()

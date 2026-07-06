@@ -25,8 +25,6 @@ from typing import Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-load_dotenv()
-
 # ─── Output schema ────────────────────────────────────────────────────────────
 
 class WorkOrderFields(BaseModel):
@@ -176,6 +174,7 @@ def _llm_extract(text: str, retry: int = 2) -> WorkOrderFields:
     except ImportError:
         raise ImportError("openai package required for LLM extraction: pip install openai")
 
+    load_dotenv()
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     schema = {
         "type": "object",
@@ -213,7 +212,7 @@ def _llm_extract(text: str, retry: int = 2) -> WorkOrderFields:
             import json
             data = json.loads(resp.choices[0].message.content)
             return WorkOrderFields(**data, confidence=0.95, extractor_used="llm")
-        except Exception as e:
+        except Exception:
             if attempt == retry:
                 raise
             time.sleep(1.0 * (attempt + 1))

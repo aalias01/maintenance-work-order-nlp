@@ -32,5 +32,6 @@ class HealthResponse(BaseModel):
     classifier_loaded: bool
     embeddings_loaded: bool
     model_mode: str
+    extractor_mode: str
     corpus_size: int
     version: str = "0.1.0"

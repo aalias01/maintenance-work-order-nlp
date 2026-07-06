@@ -19,6 +19,8 @@ models/*
 !models/lora_adapter/
 !models/embeddings_index.npy
 !models/embeddings_texts.json
+!models/corpus_meta.json
+!models/MODEL_CARD.md
 # int8 ONNX artifacts served in production (built by scripts/build_onnx.py, each < 100 MB)
 !models/onnx/
 # Track everything under models/onnx/ EXCEPT the fp32 export + its external-data blob
