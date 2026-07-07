@@ -1,6 +1,6 @@
 'use strict';
 
-const API_BASE = 'https://maintenance-nlp-api.onrender.com';
+const API_BASE = 'https://alvinalias-portfolio-ml-api.hf.space/maintenance';
 
 const CATEGORY_LABELS = {
   mechanical_failure: 'Mechanical failure',
