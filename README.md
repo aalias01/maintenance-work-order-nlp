@@ -9,9 +9,9 @@ One pipeline, three distinct uses of LLMs: as data engineer (structured extracti
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-green)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e)](LICENSE)
 
-**[Live demo](https://workorders.alvinalias.com)** | **[API docs](https://maintenance-nlp-api.onrender.com/docs)**
+**[Live demo](https://workorders.alvinalias.com)** | **[API docs](https://alvinalias-portfolio-ml-api.hf.space/maintenance/docs)**
 
-The API runs on Render's free tier; the first request after idle takes 30 to 60 seconds to wake the server.
+The API is mounted at `/maintenance` in a shared Hugging Face CPU Space. After extended inactivity, the first request can take a moment while the Space wakes and loads the ONNX models.
 
 See [models/MODEL_CARD.md](models/MODEL_CARD.md) for the classifier, extraction, retrieval, data, and limitation notes.
 
@@ -105,7 +105,7 @@ frontend/                          reading desk -> category, confidence, extract
 
 ## Tech stack
 
-Python 3.11, NLTK + spaCy, scikit-learn (TF-IDF baseline), OpenAI GPT-4o-mini with Pydantic structured output, HuggingFace Transformers + PEFT (LoRA/QLoRA, bitsandbytes), BERTopic, sentence-transformers (all-MiniLM-L6-v2), FastAPI on Render, vanilla JS on Vercel. The deployed API is torch-free: the LoRA classifier and MiniLM embedder are exported once to int8 ONNX (`scripts/build_onnx.py`) and served with onnxruntime to fit Render's free tier.
+Python 3.11, NLTK + spaCy, scikit-learn (TF-IDF baseline), OpenAI GPT-4o-mini with Pydantic structured output, HuggingFace Transformers + PEFT (LoRA/QLoRA, bitsandbytes), BERTopic, sentence-transformers (all-MiniLM-L6-v2), FastAPI on a shared Hugging Face Docker Space, vanilla JS on Vercel. The deployed API is torch-free: the LoRA classifier and MiniLM embedder are exported once to int8 ONNX (`scripts/build_onnx.py`) and served with onnxruntime in the shared gateway.
 
 `models/corpus_meta.json` restores similar-case retrieval in production. It is generated from the local CSV by `scripts/build_corpus_meta.py`, with row-count and first, middle, and last-row alignment checks against the embedding index texts.
 
