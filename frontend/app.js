@@ -442,6 +442,7 @@ function loadSample() {
 
 function enterManualMode() {
   state.activeSample = null;
+  els.orderText.closest('details')?.setAttribute('open', '');
   els.orderText.readOnly = false;
   els.orderText.value = '';
   els.provenance.textContent = 'your text · no intended label to compare';

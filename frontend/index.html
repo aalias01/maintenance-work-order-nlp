@@ -50,16 +50,19 @@
   <main>
     <section class="faceplate" aria-label="Work order reader">
       <div class="order-side">
-        <div class="order-frame">
-          <p id="provenance-line" class="provenance-line">Paste your own</p>
-          <textarea id="order-text" maxlength="2000" placeholder="Describe the failure, what was found, and what was done"></textarea>
-        </div>
         <div class="controls" aria-label="Run controls">
           <button id="sample-button" class="primary-button" type="button">Read a sample order</button>
           <button id="manual-button" class="secondary-button" type="button">Paste your own</button>
           <button id="manual-run-button" class="secondary-button hidden" type="button">Read pasted text</button>
         </div>
         <p id="control-helper" class="helper-text">Rotates eight orders I wrote and labeled myself. The intended label prints after the model commits.</p>
+        <details class="order-input mobile-disclosure" data-mobile-disclosure open>
+          <summary>View or paste the work order</summary>
+          <div class="mobile-disclosure__body order-frame">
+            <p id="provenance-line" class="provenance-line">Paste your own</p>
+            <textarea id="order-text" maxlength="2000" placeholder="Describe the failure, what was found, and what was done"></textarea>
+          </div>
+        </details>
         <div id="error-block" class="error-block hidden" role="alert"></div>
         <div id="run-warmup" class="warmup warmup-large hidden" aria-live="polite"></div>
         <div id="run-log" class="run-log" aria-live="polite"></div>
@@ -72,25 +75,34 @@
         <div id="confidence-scale" class="confidence-scale" aria-hidden="true"></div>
         <p id="intended-line" class="intended-line">your text · no intended label to compare</p>
 
-        <section class="score-section" aria-label="Every category score">
-          <h3>Every category's score</h3>
-          <div id="all-scores" class="score-list"></div>
-        </section>
+        <details class="score-section mobile-disclosure" data-mobile-disclosure open>
+          <summary>Every category score</summary>
+          <section class="mobile-disclosure__body" aria-label="Every category score">
+            <h3>Every category's score</h3>
+            <div id="all-scores" class="score-list"></div>
+          </section>
+        </details>
 
-        <section class="extraction-section" aria-label="Extracted fields">
-          <h3>What the rule-based pass pulled out</h3>
-          <p>regex extraction; the LLM extractor is a notebook result, not this endpoint (note 5)</p>
-          <div id="fields-table" class="fields-table">
-            <div class="empty-state">No fields returned.</div>
-          </div>
-        </section>
+        <details class="extraction-section mobile-disclosure" data-mobile-disclosure open>
+          <summary>Extracted fields</summary>
+          <section class="mobile-disclosure__body" aria-label="Extracted fields">
+            <h3>What the rule-based pass pulled out</h3>
+            <p>regex extraction; the LLM extractor is a notebook result, not this endpoint (note 5)</p>
+            <div id="fields-table" class="fields-table">
+              <div class="empty-state">No fields returned.</div>
+            </div>
+          </section>
+        </details>
 
-        <section class="similar-section" aria-label="Similar past cases">
-          <h3>Closest past cases from the corpus</h3>
-          <div id="similar-list" class="similar-list">
-            <div class="empty-state">No similar cases returned.</div>
-          </div>
-        </section>
+        <details class="similar-section mobile-disclosure" data-mobile-disclosure open>
+          <summary>Similar past cases</summary>
+          <section class="mobile-disclosure__body" aria-label="Similar past cases">
+            <h3>Closest past cases from the corpus</h3>
+            <div id="similar-list" class="similar-list">
+              <div class="empty-state">No similar cases returned.</div>
+            </div>
+          </section>
+        </details>
       </div>
     </section>
 
@@ -135,6 +147,7 @@
     Built by Alvin Alias · 2026 · AA-2026-05 · <a href="https://github.com/aalias01/maintenance-work-order-nlp">GitHub</a> · <a href="https://alvinalias-portfolio-ml-api.hf.space/maintenance/docs">API docs</a>
   </footer>
 
+  <script src="mobile-disclosures.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
