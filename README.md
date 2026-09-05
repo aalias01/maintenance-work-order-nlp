@@ -1,6 +1,6 @@
 # Maintenance Work Order NLP
 
-One pipeline, three distinct uses of LLMs: as data engineer (structured extraction from messy work-order text), as model (LoRA fine-tune reaching 94.4% F1 while training 1.1% of parameters), and as application target (semantic search over past cases). Built on a 3,000-record synthetic corpus with a calibrated noise layer, so every comparison measures something real.
+One pipeline, three distinct uses of language models: offline structured-extraction experiments, a LoRA classifier reaching 94.4% macro F1 while training 1.1% of parameters, and semantic search over past cases. All text is synthetic and shares generator templates, so the results measure this controlled benchmark rather than transfer to real CMMS data.
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
 [![CI](https://github.com/aalias01/maintenance-work-order-nlp/actions/workflows/ci.yml/badge.svg)](https://github.com/aalias01/maintenance-work-order-nlp/actions/workflows/ci.yml)
@@ -62,7 +62,7 @@ Macro F1 on a held-out 600-record test set (stratified 80/20 split, seed 42). Tr
 | DistilBERT + LoRA (r=8) | **94.4%** | 743K | **1.1%** | 3.9 | **2.8 MB** |
 | QLoRA on 7B decoder (stretch) | pending | | <1% | | |
 
-The generator injects ~2% label noise, which puts the effective ceiling near 98%. So the transformers' 1 to 2.4 point gain over TF-IDF is signal, not noise-fitting. LoRA recovers most of the full fine-tune's gain while updating 1.1% of parameters and producing a 2.8 MB adapter instead of a 256 MB model. That's why the adapter ships in this repo and the full model doesn't (it also exceeds GitHub's 100 MB file limit; regenerate with `scripts/run_local_pipeline.py`).
+The generator injects about 2% label noise, but that does not create an exact 98% macro-F1 ceiling. On this random row split, LoRA recovers most of the full fine-tune's score while updating 1.1% of parameters and producing a 2.8 MB adapter instead of a 256 MB model. Rows share generator templates, so a site-held-out or template-held-out evaluation would be a stronger generalization test.
 
 ![Confusion matrix, DistilBERT](figures/confusion_matrix_distilbert.png)
 
@@ -145,7 +145,9 @@ Open `frontend/index.html`; it expects the API at `http://localhost:8000` until 
 ## Limitations
 
 - The corpus is synthetic. The noise layer makes comparisons meaningful, but nothing here has seen real CMMS export quirks (inconsistent date formats, multi-language entries, copy-pasted boilerplate).
+- The random row split can place records produced from similar generator templates in train and test. Reported classifier scores are within-generator results, not evidence of real-site transfer.
 - ETL accuracy is measured on 100 records; tight confidence intervals would need a larger sample.
+- The live endpoint uses rule-based extraction. The 70% GPT failure-mode accuracy is an offline evaluation result, not the served route.
 - The QLoRA notebook is scaffolded but not yet run.
 
 Built by [Alvin Alias](https://github.com/aalias01), MS Data Science, University of Washington. 12 years industrial engineering (HVAC, subsea, manufacturing).
